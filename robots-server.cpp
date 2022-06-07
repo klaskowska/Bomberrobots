@@ -4,19 +4,21 @@
 // cargo run --bin gui -- --client-address localhost:36725 --port 46284
 
 // TODO: server-parser: co jeśli ujemne parametry?
+// TODO: czytanie jakiekolwiek
 
 #include "server-parser.h"
 #include "server-tcp-handler.h"
+#include "game-engine.h"
 
 int main(int argc, const char** argv) {
     Parser parser;
-    server_parameters_t parameters = parser.parse_parameters(argc, argv);
+    server_parameters_t game_params = parser.parse_parameters(argc, argv);
 
-    Server_tcp_handler tcp_handler(parameters.port, parameters.turn_duration);
+    Server_tcp_handler tcp_handler(game_params.port);
 
-    tcp_handler.start_listening();
+    Game_engine game_engine(game_params, tcp_handler);
 
-    tcp_handler.manage_connections();
+    game_engine.start_game();
 
     return 0;
 }

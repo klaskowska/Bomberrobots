@@ -1,8 +1,8 @@
 #include "server-tcp-handler.h"
 #include "error-handler.h"
 
-Server_tcp_handler::Server_tcp_handler(uint16_t port, uint64_t turn_duration) 
-    : port(port), turn_duration(turn_duration) {
+Server_tcp_handler::Server_tcp_handler(uint16_t port) 
+    : port(port) {
     
     active_clients = 0;
 
@@ -18,7 +18,8 @@ Server_tcp_handler::Server_tcp_handler(uint16_t port, uint64_t turn_duration)
 }
 
 Server_tcp_handler::~Server_tcp_handler() {
-    CHECK_ERRNO(close(poll_descriptors[0].fd));
+    if (poll_descriptors[0].fd >= 0)
+        CHECK_ERRNO(close(poll_descriptors[0].fd));
 }
 
 int Server_tcp_handler::open_socket() {
@@ -60,66 +61,74 @@ int Server_tcp_handler::accept_connection(int socket_fd, struct sockaddr_in *cli
     return client_fd;
 }
 
-void Server_tcp_handler::manage_connections() {
-    while (true) {
-        for (size_t i = 0; i < conn_max; ++i) {
-            poll_descriptors[i].revents = 0;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(turn_duration));
-
-        int poll_status = poll(poll_descriptors, conn_max, 0);
-        if (poll_status == -1 ) {
-            if (errno == EINTR) 
-                fprintf(stderr, "Interrupted system call\n");
-            else    
-                PRINT_ERRNO();
-        } 
-        else if (poll_status > 0) {
-            if (poll_descriptors[0].revents & POLLIN) {
-                /* Przyjmuję nowe połączenie */
-                int client_fd = accept_connection(poll_descriptors[0].fd, NULL);
-
-                bool accepted = false;
-                for (size_t i = 1; i < conn_max; ++i) {
-                    if (poll_descriptors[i].fd == -1) {
-                        fprintf(stderr, "Received new connection (%ld)\n", i);
-
-                        poll_descriptors[i].fd = client_fd;
-                        poll_descriptors[i].events = POLLIN;
-                        active_clients++;
-                        accepted = true;
-                        break;
-                    }
-                }
-                if (!accepted) {
-                    CHECK_ERRNO(close(client_fd));
-                    fprintf(stderr, "Too many clients\n");
-                }
-            }
-            for (size_t i = 1; i < conn_max; ++i) {
-                if (poll_descriptors[i].fd != -1 && (poll_descriptors[i].revents & (POLLIN | POLLERR))) {
-                    ssize_t received_bytes = read(poll_descriptors[i].fd, buf, buf_size);
-                    if (received_bytes < 0) {
-                        fprintf(stderr, "Error when reading message from connection %ld (errno %d, %s)\n", i, errno, strerror(errno));
-                        CHECK_ERRNO(close(poll_descriptors[i].fd));
-                        poll_descriptors[i].fd = -1;
-                        active_clients -= 1;
-                    } else if (received_bytes == 0) {
-                        fprintf(stderr, "Ending connection (%ld)\n", i);
-                        CHECK_ERRNO(close(poll_descriptors[i].fd));
-                        poll_descriptors[i].fd = -1;
-                        active_clients -= 1;
-                    } else {
-                        char tmp[buf_size];
-                        memcpy(tmp, buf, received_bytes);
-                        printf("(%ld) -->%.*s\n", i, (int) received_bytes, tmp);
-                    }
-                }
-            }
-        } else {
-            printf("%ld milliseconds passed without any events\n", turn_duration);
-        }
+void Server_tcp_handler::reset_revents() {
+    for (size_t i = 0; i < conn_max; ++i) {
+        poll_descriptors[i].revents = 0;
     }
 }
 
+int Server_tcp_handler::poll_exec() {
+    return poll(poll_descriptors, conn_max, 0);
+}
+
+bool Server_tcp_handler::is_new_connection() {
+    return poll_descriptors[0].revents & POLLIN;
+}
+
+bool Server_tcp_handler::accept_client() {
+    int client_fd = accept_connection(poll_descriptors[0].fd, NULL);
+
+    bool accepted = false;
+    for (size_t i = 1; i < conn_max; ++i) {
+        if (poll_descriptors[i].fd == -1) {
+            fprintf(stderr, "Przyjęto połączenie (%ld).\n", i);
+
+            poll_descriptors[i].fd = client_fd;
+            poll_descriptors[i].events = POLLIN;
+            active_clients++;
+            accepted = true;
+            break;
+        }
+    }
+    if (!accepted) {
+        CHECK_ERRNO(close(client_fd));
+        fprintf(stderr, "Zbyt dużo klientów.\n");
+    }
+    return accepted;
+}
+
+bool Server_tcp_handler::is_message_from(size_t i) {
+    return poll_descriptors[i].fd != -1 && (poll_descriptors[i].revents & (POLLIN | POLLERR));
+}
+
+void Server_tcp_handler::report_msg_status(size_t i, Message_recv_status status) {
+    if (status != Message_recv_status::SUCCESS) {
+
+        switch (status) {
+            case Message_recv_status::ERROR_CONN:
+                fprintf(stderr, "Problem podczas czytania wiadomości od klienta %ld (errno %d, %s)\n", i, errno, strerror(errno));
+                break;
+            case Message_recv_status::ERROR_MSG:
+                fprintf(stderr, "Błąd w wiadomości odebranej od klienta %ld\n", i);
+                break;
+            case Message_recv_status::END_CONN:
+                fprintf(stderr, "Klient %ld zakończył połączenie.\n", i);
+                break;
+            default:
+                break;
+        }
+
+        CHECK_ERRNO(close(poll_descriptors[i].fd));
+        poll_descriptors[i].fd = -1;
+        active_clients -= 1;
+
+        fprintf(stderr, "Zakończono połączenie z klientem %ld.\n", i);
+    }
+}
+
+byte_msg Server_tcp_handler::read_from(size_t i) {
+    byte_msg msg;
+    msg.received_bytes_length = read(poll_descriptors[i].fd, buf, buf_size);
+    memcpy(&msg.buf[0], &buf[0], msg.received_bytes_length);
+    return msg;
+}
