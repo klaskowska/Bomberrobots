@@ -26,15 +26,19 @@ int Server_tcp_handler::open_socket() {
     if (socket_fd < 0) {
         exit_with_msg("Nie udało się otworzyć gniazda.\n");
     }
+    int yes;
+    setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, (char *) &yes, sizeof(int));
 
     return socket_fd;
 }
 
 void Server_tcp_handler::bind_socket(int socket_fd) {
-    struct sockaddr_in server_address;
-    server_address.sin_family = AF_INET6;
-    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_address.sin_port = htons(port);
+    struct sockaddr_in6 server_address;
+    server_address.sin6_family = AF_INET6;
+    server_address.sin6_flowinfo = 0;
+    server_address.sin6_addr = in6addr_any;
+    server_address.sin6_port = htons(port);
+    server_address.sin6_scope_id = 0;
 
     CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &server_address,
                      (socklen_t) sizeof(server_address)));
@@ -45,7 +49,7 @@ void Server_tcp_handler::start_listening() {
     CHECK_ERRNO(listen(poll_descriptors[0].fd, 3));
 }
 
-inline static int accept_connection(int socket_fd, struct sockaddr_in *client_address) {
+int Server_tcp_handler::accept_connection(int socket_fd, struct sockaddr_in *client_address) {
     socklen_t client_address_length = (socklen_t) sizeof(*client_address);
 
     int client_fd = accept(socket_fd, (struct sockaddr *) client_address, &client_address_length);
@@ -62,8 +66,7 @@ void Server_tcp_handler::manage_connections() {
             poll_descriptors[i].revents = 0;
         }
 
-        // TODO: czy w sleep sa milisekundy?
-        sleep(turn_duration);
+        std::this_thread::sleep_for(std::chrono::milliseconds(turn_duration));
 
         int poll_status = poll(poll_descriptors, conn_max, 0);
         if (poll_status == -1 ) {
@@ -78,9 +81,9 @@ void Server_tcp_handler::manage_connections() {
                 int client_fd = accept_connection(poll_descriptors[0].fd, NULL);
 
                 bool accepted = false;
-                for (int i = 1; i < conn_max; ++i) {
+                for (size_t i = 1; i < conn_max; ++i) {
                     if (poll_descriptors[i].fd == -1) {
-                        fprintf(stderr, "Received new connection (%d)\n", i);
+                        fprintf(stderr, "Received new connection (%ld)\n", i);
 
                         poll_descriptors[i].fd = client_fd;
                         poll_descriptors[i].events = POLLIN;
@@ -94,26 +97,28 @@ void Server_tcp_handler::manage_connections() {
                     fprintf(stderr, "Too many clients\n");
                 }
             }
-            for (int i = 1; i < conn_max; ++i) {
+            for (size_t i = 1; i < conn_max; ++i) {
                 if (poll_descriptors[i].fd != -1 && (poll_descriptors[i].revents & (POLLIN | POLLERR))) {
-                    ssize_t received_bytes = read(poll_descriptors[i].fd, buf, BUF_SIZE);
+                    ssize_t received_bytes = read(poll_descriptors[i].fd, buf, buf_size);
                     if (received_bytes < 0) {
-                        fprintf(stderr, "Error when reading message from connection %d (errno %d, %s)\n", i, errno, strerror(errno));
+                        fprintf(stderr, "Error when reading message from connection %ld (errno %d, %s)\n", i, errno, strerror(errno));
                         CHECK_ERRNO(close(poll_descriptors[i].fd));
                         poll_descriptors[i].fd = -1;
                         active_clients -= 1;
                     } else if (received_bytes == 0) {
-                        fprintf(stderr, "Ending connection (%d)\n", i);
+                        fprintf(stderr, "Ending connection (%ld)\n", i);
                         CHECK_ERRNO(close(poll_descriptors[i].fd));
                         poll_descriptors[i].fd = -1;
                         active_clients -= 1;
                     } else {
-                        printf("(%d) -->%.*s\n", i, (int) received_bytes, buf);
+                        char tmp[buf_size];
+                        memcpy(tmp, buf, received_bytes);
+                        printf("(%ld) -->%.*s\n", i, (int) received_bytes, tmp);
                     }
                 }
             }
         } else {
-            printf("%d milliseconds passed without any events\n", turn_duration);
+            printf("%ld milliseconds passed without any events\n", turn_duration);
         }
     }
 }

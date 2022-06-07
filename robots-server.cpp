@@ -10,7 +10,13 @@
 
 int main(int argc, const char** argv) {
     Parser parser;
-    parser.parse_parameters(argc, argv);
+    server_parameters_t parameters = parser.parse_parameters(argc, argv);
+
+    Server_tcp_handler tcp_handler(parameters.port, parameters.turn_duration);
+
+    tcp_handler.start_listening();
+
+    tcp_handler.manage_connections();
 
     return 0;
 }
