@@ -1,18 +1,12 @@
 #ifndef SERVER_PARSER_H
 #define SERVER_PARSER_H
 
-#include <boost/lexical_cast.hpp>
+
 #include <boost/program_options.hpp>
-#include <boost/asio.hpp>
+#include <chrono>
 #include "error-handler.h"
 
 namespace po = boost::program_options;
-namespace asio = boost::asio;
-
-using boost::lexical_cast;
-using asio::ip::tcp;
-using asio::ip::udp;
-
 
 typedef struct server_parameters {
     uint16_t bomb_timer;
@@ -29,10 +23,10 @@ typedef struct server_parameters {
 } server_parameters_t;
 
 class Parser {
-    public:
-        Parser() = default;
+public:
+    Parser() = default;
 
-        server_parameters_t parse_parameters(int ac, const char* av[]);
+    server_parameters_t parse_parameters(int ac, const char* av[]);
 
 };
 
