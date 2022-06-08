@@ -128,7 +128,8 @@ void Server_tcp_handler::report_msg_status(size_t i, Message_recv_status status)
 
 byte_msg Server_tcp_handler::read_from(size_t i) {
     byte_msg msg;
+
     msg.received_bytes_length = read(poll_descriptors[i].fd, buf, buf_size);
-    memcpy(&msg.buf[0], &buf[0], msg.received_bytes_length);
+    msg.buf = std::vector<std::byte>(buf, buf + msg.received_bytes_length);
     return msg;
 }

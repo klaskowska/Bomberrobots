@@ -35,7 +35,6 @@ void manage_connections() {
                 if (tcp_handler.is_message_from(i)) {
 
                     Message_recv_status status = handle_msg(i);
-                    // ssize_t received_bytes = read(poll_descriptors[i].fd, buf, buf_size);
 
                     tcp_handler.report_msg_status(i, status);
                 }
@@ -51,8 +50,8 @@ Message_recv_status handle_msg(size_t i) {
 
     byte_msg received_msg = tcp_handler.read_from(i);
 
-    // std::string string2(received_msg.buf.begin(), received_msg.buf.end());
-    // std::cout << (string2.data()+1) << " size:"<< string2.size() << "\n";
+    std::string str(reinterpret_cast<const char *>(&received_msg.buf[0]), received_msg.received_bytes_length);
+    std::cout << str;
 
     // TODO: handle status
     return Message_recv_status::SUCCESS;
