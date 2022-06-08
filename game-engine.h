@@ -36,7 +36,7 @@ void manage_connections() {
 
                     Message_recv_status status = handle_msg(i);
 
-                    tcp_handler.report_msg_status(i, status);
+                    tcp_handler.report_msg_status(status);
                 }
             }
         } else {
@@ -47,14 +47,16 @@ void manage_connections() {
 
 //TODO
 Message_recv_status handle_msg(size_t i) {
+    tcp_handler.set_current_client_pos(i);
 
-    byte_msg received_msg = tcp_handler.read_from(i);
+    Message_recv message_recv = tcp_handler.read_msg_from();
 
-    std::string str(reinterpret_cast<const char *>(&received_msg.buf[0]), received_msg.received_bytes_length);
-    std::cout << str;
 
     // TODO: handle status
-    return Message_recv_status::SUCCESS;
+    // TODO: handle specific message
+
+
+    return message_recv.status;
 }
 
 public:

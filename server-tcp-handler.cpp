@@ -1,10 +1,12 @@
 #include "server-tcp-handler.h"
 #include "error-handler.h"
 
+
 Server_tcp_handler::Server_tcp_handler(uint16_t port) 
     : port(port) {
     
     active_clients = 0;
+    current_buf.buf_length = 0;
 
     for (size_t i = 0; i < conn_max; ++i) {
         poll_descriptors[i].fd = -1;
@@ -101,35 +103,111 @@ bool Server_tcp_handler::is_message_from(size_t i) {
     return poll_descriptors[i].fd != -1 && (poll_descriptors[i].revents & (POLLIN | POLLERR));
 }
 
-void Server_tcp_handler::report_msg_status(size_t i, Message_recv_status status) {
+void Server_tcp_handler::report_msg_status(Message_recv_status status) {
     if (status != Message_recv_status::SUCCESS) {
 
         switch (status) {
             case Message_recv_status::ERROR_CONN:
-                fprintf(stderr, "Problem podczas czytania wiadomości od klienta %ld (errno %d, %s)\n", i, errno, strerror(errno));
+                fprintf(stderr, "Problem podczas czytania wiadomości od klienta %ld (errno %d, %s)\n", current_client_pos, errno, strerror(errno));
                 break;
             case Message_recv_status::ERROR_MSG:
-                fprintf(stderr, "Błąd w wiadomości odebranej od klienta %ld\n", i);
+                fprintf(stderr, "Błąd w wiadomości odebranej od klienta %ld\n", current_client_pos);
                 break;
             case Message_recv_status::END_CONN:
-                fprintf(stderr, "Klient %ld zakończył połączenie.\n", i);
+                fprintf(stderr, "Klient %ld zakończył połączenie.\n", current_client_pos);
                 break;
             default:
                 break;
         }
 
-        CHECK_ERRNO(close(poll_descriptors[i].fd));
-        poll_descriptors[i].fd = -1;
+        CHECK_ERRNO(close(poll_descriptors[current_client_pos].fd));
+        poll_descriptors[current_client_pos].fd = -1;
         active_clients -= 1;
 
-        fprintf(stderr, "Zakończono połączenie z klientem %ld.\n", i);
+        fprintf(stderr, "Zakończono połączenie z klientem %ld.\n", current_client_pos);
     }
 }
 
-byte_msg Server_tcp_handler::read_from(size_t i) {
-    byte_msg msg;
+void Server_tcp_handler::read_from() {
+    current_buf.buf_length = read(poll_descriptors[current_client_pos].fd, buf, buf_size);
+    current_buf.buf = buf;
+}
 
-    msg.received_bytes_length = read(poll_descriptors[i].fd, buf, buf_size);
-    msg.buf = std::vector<std::byte>(buf, buf + msg.received_bytes_length);
-    return msg;
+Message_recv Server_tcp_handler::read_msg_from() {
+    
+    Message_recv message;
+
+    read_from();
+
+    if (current_buf.buf_length < 0) {
+        message.status = Message_recv_status::ERROR_CONN;
+        return message;
+    }
+    if (current_buf.buf_length == 0) {
+        message.status = Message_recv_status::END_CONN;
+        return message;        
+    }
+
+    try {
+        message.client_message = read_client_msg();
+        message.status = Message_recv_status::SUCCESS;
+    } catch (MsgException &e) {
+        message.status = Message_recv_status::ERROR_MSG;
+    }
+
+    return message;
+}
+
+Client_message Server_tcp_handler::read_client_msg() {
+    Client_message_code code = (Client_message_code)read_uint8();
+
+    Client_message msg;
+
+    switch (code)
+    {
+    case Client_message_code::Join:
+        msg = Join_msg(read_string());
+        break;
+    case Client_message_code::Place_bomb_client:
+        msg = Place_bomb_msg();
+        break;
+    case Client_message_code::Place_block_client:
+        msg = Place_block_msg();
+        break;
+    case Client_message_code::Move_client:
+        msg = Move_msg((Direction)read_uint8());
+        break;
+    default:
+        throw MsgException();
+    }
+    return current_buf.buf_length == 0 ? msg : read_client_msg();
+}
+
+void Server_tcp_handler::current_buf_update(size_t bytes_count) {
+    current_buf.buf += bytes_count;
+    current_buf.buf_length -= bytes_count;
+}
+
+uint8_t Server_tcp_handler::read_uint8() {
+    uint8_t result = (uint8_t)current_buf.buf[0];
+    current_buf_update(1);
+    return result;
+}
+
+std::string Server_tcp_handler::read_string() {
+    uint8_t str_length = read_uint8();
+
+
+    if (str_length > current_buf.buf_length) {
+        throw MsgException();
+    }
+
+    std::string str(reinterpret_cast<const char *>(current_buf.buf), str_length);
+    current_buf_update(str_length);
+
+	return str;
+}
+
+void Server_tcp_handler::set_current_client_pos(size_t i) {
+    current_client_pos = i;
 }
