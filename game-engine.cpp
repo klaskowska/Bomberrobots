@@ -19,6 +19,7 @@ void install_signal_handler(int signal, void (*handler)(int), int flags) {
 }
 
 void Game_engine::start_game() {
+
     install_signal_handler(SIGINT, catch_int, SA_RESTART);
 
     tcp_handler.start_listening();
@@ -39,7 +40,8 @@ void Game_engine::manage_connections() {
         else if (!finish_server && poll_status > 0) {
             if (tcp_handler.is_new_connection()) {
                 if (int i = tcp_handler.accept_client() >= 0) {
-                    handle_hello(i);
+                    send_hello(i);
+                    send_hello_state(i);
                 }
             }
             for (size_t i = 1; i < tcp_handler.get_conn_max(); ++i) {
@@ -94,14 +96,12 @@ void Game_engine::handle_join() {
 
 }
 
-void Game_engine::handle_hello(size_t i) {
+void Game_engine::send_hello(size_t i) {
     std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
-    std::cout << "1\n";
+
     // prepare message
     msg->push_back(uint8_to_byte(Server_message_code::Hello));
-    std::cout << "2\n";
     insert_vector(msg, string_to_bytes(game_params.server_name));
-    std::cout << "3\n";
     msg->push_back(uint8_to_byte(game_params.players_count));
     insert_vector(msg, uint16_to_bytes(game_params.size_x));
     insert_vector(msg, uint16_to_bytes(game_params.size_y));
@@ -114,3 +114,59 @@ void Game_engine::handle_hello(size_t i) {
 
 }
 
+void Game_engine::send_hello_state(size_t i) {
+
+    if (gameplay_started) {
+        send_game_started(i);
+        send_all_turns(i);
+    }
+    else {
+        send_all_accepted_player(i);
+    }
+}
+
+void Game_engine::send_game_started(size_t i) {
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+
+    // prepare message
+    msg->push_back(uint8_to_byte(Server_message_code::GameStarted));
+    insert_vector(msg, player_map_to_bytes(players));
+
+    // send message
+    tcp_handler.send_message(i, *msg);
+
+    std::cout << "Wysłano GameStarted do klienta " << i << "\n";  
+}
+
+void Game_engine::send_turn(size_t i, Turn_info turn) {
+    tcp_handler.send_message(i, turn.to_bytes());
+    std::cout << "Wysłano turę nr " << turn.get_turn() << "do klienta " << i << "\n";
+
+}
+
+void Game_engine::send_all_turns(size_t i) {
+    for (auto &turn : turns) {
+        send_turn(i, turn);
+    }
+}
+
+void Game_engine::send_accepted_player(size_t i, player_id id, player_t player) {
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+
+    // prepare message
+    msg->push_back(uint8_to_byte(Server_message_code::AcceptedPlayer));
+    msg->push_back(uint8_to_byte(id));
+    insert_vector(msg, player_to_bytes(player));
+
+    // send message
+    tcp_handler.send_message(i, *msg);
+
+    std::cout << "Wysłano AcceptedPlayer do klienta " << i << "\n"; 
+
+}
+
+void Game_engine::send_all_accepted_player(size_t i) {
+    for (auto &player : players) {
+        send_accepted_player(i, player.first, player.second);
+    }
+}

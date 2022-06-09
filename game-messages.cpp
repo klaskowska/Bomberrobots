@@ -27,7 +27,6 @@ Game_info::Game_info(std::string server_name, uint16_t size_x, uint16_t size_y, 
 
     for (auto player : players) {
         if (this->scores.count(player.first) == 0) {
-            std::cout << "iii\n";
             this->scores.insert(std::pair(player.first, 0));
         }
     }

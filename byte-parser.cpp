@@ -148,3 +148,29 @@ std::vector<std::byte> score_map_to_bytes(std::map<player_id, score> scores) {
 
     return message;
 }
+
+// added with server implementation
+
+std::vector<std::byte> uint8_list_to_bytes(std::vector<uint8_t> elements) {
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+
+    insert_vector(msg, uint32_to_bytes((uint32_t)elements.size()));
+
+    for (auto element : elements) {
+        msg->push_back(uint8_to_byte(element));
+    }
+
+    return *msg;
+}
+
+std::vector<std::byte> position_list_to_bytes(std::vector<position_t> positions) {
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+
+    insert_vector(msg, uint32_to_bytes((uint32_t) positions.size()));
+
+    for (auto position : positions) {
+        insert_vector(msg, position_to_bytes(position));
+    }
+
+    return *msg;    
+}

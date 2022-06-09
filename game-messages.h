@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <map>
+#include <vector>
 #include <iostream>
 
 
@@ -267,6 +268,5 @@ public:
         code = Client_message_code::Move_client;
     }
 };
-
 
 #endif
