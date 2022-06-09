@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
 
     Game_engine game_engine(game_params, tcp_handler);
 
-    game_engine.start_game();
+    // game_engine.start_game();
 
     return 0;
 }

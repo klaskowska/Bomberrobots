@@ -6,6 +6,7 @@
 
 #include "server-parser.h"
 #include "server-tcp-handler.h"
+#include "byte-parser.h"
 
 class Game_engine {
 private:
@@ -15,62 +16,22 @@ private:
     server_parameters_t game_params;
     Server_tcp_handler tcp_handler;
 
-void manage_connections() {
-    while (true) {
-        tcp_handler.reset_revents();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(game_params.turn_duration));
-
-        int poll_status = tcp_handler.poll_exec();
-        if (poll_status == -1 ) {
-            exit_with_msg("Błąd w połączeniu.\n");            
-        } 
-        else if (poll_status > 0) {
-            if (tcp_handler.is_new_connection()) {
-                if (tcp_handler.accept_client()) {
-                    // send hello
-                }
-            }
-            for (size_t i = 1; i < tcp_handler.get_conn_max(); ++i) {
-                if (tcp_handler.is_message_from(i)) {
-
-                    Message_recv_status status = handle_msg(i);
-
-                    tcp_handler.report_msg_status(status);
-                }
-            }
-        } else {
-            printf("%ld milliseconds passed without any events\n", game_params.turn_duration);
-        }
-    }
-}
-
-//TODO
-Message_recv_status handle_msg(size_t i) {
-    tcp_handler.set_current_client_pos(i);
-
-    Message_recv message_recv = tcp_handler.read_msg_from();
+void manage_connections();
 
 
-    // TODO: handle status
-    // TODO: handle specific message
+Message_recv_status handle_msg(size_t i);
 
 
-    return message_recv.status;
-}
+
+void handle_join();
+
+void handle_hello(size_t i);
 
 public:
     Game_engine(server_parameters_t game_params, Server_tcp_handler &tcp_handler) 
-        : game_params(game_params), tcp_handler(tcp_handler) {
-    }
+        : game_params(game_params), tcp_handler(tcp_handler) {}
 
-    void start_game() {
-        tcp_handler.start_listening();
-
-        manage_connections();
-    }
-
-    
+    void start_game();    
 
 };
 

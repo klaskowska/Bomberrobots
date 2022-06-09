@@ -13,7 +13,7 @@
 #include <netinet/tcp.h>
 #include <vector>
 #include <exception>
-#include "game_messages.h"
+#include "game-messages.h"
 
 enum class Message_recv_status {
     ERROR_CONN,
@@ -25,11 +25,11 @@ enum class Message_recv_status {
 typedef struct Message_recv {
     Message_recv_status status;
     Client_message client_message;
-};
+} Message_recv;
 
 typedef struct current_buf {
     std::byte *buf;
-    size_t buf_length;
+    ssize_t buf_length;
 } current_buf_t;
 
 struct MsgException : public std::exception
@@ -42,7 +42,7 @@ struct MsgException : public std::exception
 
 class Server_tcp_handler {
 private:
-    static const size_t conn_max = 25;
+    static const ssize_t conn_max = 25;
     static const size_t queue_length = 27;
     static const size_t buf_size = 256;
     std::byte buf[buf_size];
@@ -51,9 +51,6 @@ private:
     uint16_t port;
 
     size_t active_clients;
-
-    // current client's position in poll_descriptors
-    size_t current_client_pos;
 
     struct pollfd poll_descriptors[conn_max];
 
@@ -64,6 +61,12 @@ private:
     int accept_connection(int socket_fd, struct sockaddr_in *client_address);
 
     uint8_t read_uint8();
+
+    std::string read_string();
+
+    void current_buf_update(size_t bytes_count);
+
+    Client_message read_client_msg(size_t i);
 
 public:
     Server_tcp_handler(uint16_t port);
@@ -81,27 +84,21 @@ public:
 
     bool is_new_connection();
 
-    // returns if client has successfully connected
-    bool accept_client();
+    // returns descriptor position if client has successfully connected
+    // or -1 if not
+    ssize_t accept_client();
 
     // is message from client whom descriptor is at i position
     bool is_message_from(size_t i);
 
-    void report_msg_status(Message_recv_status status);
+    void report_msg_status(Message_recv_status status, size_t i);
 
-    void read_from();
+    void read_from(size_t i);
 
-    Message_recv read_msg_from();
+    Message_recv read_msg_from(size_t i);
 
-    void set_current_client_pos(size_t i);
+    void send_message(size_t i, std::vector<std::byte> msg);
 
-    uint8_t read_uint8();
-
-    std::string read_string();
-
-    void current_buf_update(size_t bytes_count);
-
-    Client_message read_client_msg();
 
 
 };
