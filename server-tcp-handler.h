@@ -13,6 +13,7 @@
 #include <netinet/tcp.h>
 #include <vector>
 #include <exception>
+#include <unistd.h>
 #include "game-messages.h"
 
 enum class Message_recv_status {

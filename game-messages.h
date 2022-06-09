@@ -64,22 +64,16 @@ typedef struct position {
     uint16_t y;
 } position_t;
 
-bool operator<(const position_t& first, const position_t& second) {
-    return (first.x < second.y) || (first.x == second.x && first.y < second.y);
-}
+bool operator<(const position_t& first, const position_t& second);
 
-bool operator==(const position_t& first, const position_t& second) {
-    return first.x == second.x && first.y == second.y;
-}
+bool operator==(const position_t& first, const position_t& second);
 
 typedef struct bomb {
     position_t position;
     uint16_t timer;
 } bomb_t;
 
-bool operator<(const bomb_t& first, const bomb_t& second) {
-    return (first.position < second.position) || (first.position == second.position && first.timer < second.timer);
-}
+bool operator<(const bomb_t& first, const bomb_t& second);
 
 class Lobby_info {
     public:

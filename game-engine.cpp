@@ -73,11 +73,13 @@ void Game_engine::handle_join() {
 }
 
 void Game_engine::handle_hello(size_t i) {
-    std::shared_ptr<std::vector<std::byte>> msg;
-
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+    std::cout << "1\n";
     // prepare message
     msg->push_back(uint8_to_byte(Server_message_code::Hello));
+    std::cout << "2\n";
     insert_vector(msg, string_to_bytes(game_params.server_name));
+    std::cout << "3\n";
     msg->push_back(uint8_to_byte(game_params.players_count));
     insert_vector(msg, uint16_to_bytes(game_params.size_x));
     insert_vector(msg, uint16_to_bytes(game_params.size_y));

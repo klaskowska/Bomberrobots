@@ -4,9 +4,10 @@
 #include <cstdint>
 #include <string>
 
-#include "server-parser.h"
 #include "server-tcp-handler.h"
 #include "byte-parser.h"
+#include "server-parser.h"
+
 
 class Game_engine {
 private:

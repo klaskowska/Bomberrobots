@@ -4,10 +4,9 @@
 // cargo run --bin gui -- --client-address localhost:36725 --port 46284
 
 // TODO: server-parser: co jeśli ujemne parametry?
-// TODO: czytanie jakiekolwiek
+// TODO: obsluga signal, by zamykac deskryptor
 
-#include "server-parser.h"
-#include "server-tcp-handler.h"
+
 #include "game-engine.h"
 
 int main(int argc, const char** argv) {
@@ -18,7 +17,7 @@ int main(int argc, const char** argv) {
 
     Game_engine game_engine(game_params, tcp_handler);
 
-    // game_engine.start_game();
+    game_engine.start_game();
 
     return 0;
 }

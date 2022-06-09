@@ -212,6 +212,7 @@ std::string Server_tcp_handler::read_string() {
 
 void Server_tcp_handler::send_message(size_t i, std::vector<std::byte> msg) {
     errno = 0;
+
     ssize_t sent_length = send(poll_descriptors[i].fd, (std::byte*)&msg[0], msg.size(), NO_FLAGS);
     if (sent_length < 0) {
         printf("Nie udało się wysłać wiadomości do klienta %ld.\n", i);
