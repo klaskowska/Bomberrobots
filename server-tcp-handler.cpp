@@ -21,9 +21,12 @@ Server_tcp_handler::Server_tcp_handler(uint16_t port)
     bind_socket(poll_descriptors[0].fd);
 }
 
-Server_tcp_handler::~Server_tcp_handler() {
-    if (poll_descriptors[0].fd >= 0)
-        CHECK_ERRNO_EXIT(close(poll_descriptors[0].fd));
+void Server_tcp_handler::close_conn() {
+    for (size_t i = 0; i < conn_max; ++i) {
+        if (poll_descriptors[i].fd >= 0) {
+            CHECK_ERRNO_EXIT(close(poll_descriptors[i].fd));
+        }
+    }
 }
 
 int Server_tcp_handler::open_socket() {

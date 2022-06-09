@@ -1,13 +1,33 @@
 #include "game-engine.h"
 
+void catch_int(int sig) {
+    finish_server = true;
+    fprintf(stderr,
+            "Złapano sygnał %d. Koniec pracy serwera.\n", sig);
+}
+
+void install_signal_handler(int signal, void (*handler)(int), int flags) {
+    struct sigaction action;
+    sigset_t block_mask;
+
+    sigemptyset(&block_mask);
+    action.sa_handler = handler;
+    action.sa_mask = block_mask;
+    action.sa_flags = flags;
+
+    CHECK_ERRNO(sigaction(signal, &action, NULL));
+}
+
 void Game_engine::start_game() {
+    install_signal_handler(SIGINT, catch_int, SA_RESTART);
+
     tcp_handler.start_listening();
 
     manage_connections();
 }
 
 void Game_engine::manage_connections() {
-    while (true) {
+    while (!finish_server) {
         tcp_handler.reset_revents();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(game_params.turn_duration));
@@ -16,7 +36,7 @@ void Game_engine::manage_connections() {
         if (poll_status == -1 ) {
             exit_with_msg("Błąd w połączeniu.\n");            
         } 
-        else if (poll_status > 0) {
+        else if (!finish_server && poll_status > 0) {
             if (tcp_handler.is_new_connection()) {
                 if (int i = tcp_handler.accept_client() >= 0) {
                     handle_hello(i);
@@ -31,9 +51,11 @@ void Game_engine::manage_connections() {
                 }
             }
         } else {
-            printf("%ld milliseconds passed without any events\n", game_params.turn_duration);
+            printf("Żaden klient nie wykonał ruchu\n");
         }
     }
+
+    tcp_handler.close_conn();
 }
 
 //TODO
@@ -91,3 +113,4 @@ void Game_engine::handle_hello(size_t i) {
     tcp_handler.send_message(i, *msg);
 
 }
+

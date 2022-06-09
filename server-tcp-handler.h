@@ -72,8 +72,6 @@ private:
 public:
     Server_tcp_handler(uint16_t port);
 
-    ~Server_tcp_handler();
-
     size_t get_conn_max() { return conn_max; }
 
     void start_listening();
@@ -99,6 +97,8 @@ public:
     Message_recv read_msg_from(size_t i);
 
     void send_message(size_t i, std::vector<std::byte> msg);
+
+    void close_conn();
 
 
 
