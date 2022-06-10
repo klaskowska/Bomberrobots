@@ -9,7 +9,6 @@ std::byte uint8_to_byte(uint8_t u8) {
 }
 
 std::vector<std::byte> uint16_to_bytes(uint16_t u16) {
-    std::cout << "u16: " << u16 << "\n";
     std::vector<std::byte> message;
     message.push_back((std::byte) (u16 >> 8));
     message.push_back((std::byte) u16);

@@ -83,8 +83,11 @@ private:
 
     void seed_blocks();
 
-    // returns if player can walk into this position
+    // returns if position is on the board
     bool check_position(position_t position);
+
+    // returns if player can walk into this position
+    bool check_position_to_move(position_t position);
 
     void summarise_turn();
 

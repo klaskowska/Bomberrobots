@@ -189,7 +189,7 @@ void Game_engine::handle_explosion(bomb_id id, bomb_t bomb) {
             }
 
             if (go_right) {
-                position_t right = position_t(x + i, y);
+                const position_t right = position_t(x + i, y);
                 if (check_position(right)) {
                     for (auto &player : players_positions) {
                         if (player.second == right) {
@@ -495,7 +495,7 @@ void Game_engine::Move_msg::handle_msg(size_t i) {
         break;
     }
 
-    if (!engine.check_position(new_position)) {
+    if (!engine.check_position_to_move(new_position)) {
         std::cout << "Niedozwolony ruch dla gracza" << i << "\n";
         return;
     }
@@ -507,12 +507,11 @@ void Game_engine::Move_msg::handle_msg(size_t i) {
 }
 
 bool Game_engine::check_position(position_t pos) {
-    if (pos.x < game_params.size_x && pos.y < game_params.size_y) {
-        if (blocks_positions.count(pos) == 0)
-            return true;
-    }
+    return pos.x < game_params.size_x && pos.y < game_params.size_y;
+}
 
-    return false;
+bool Game_engine::check_position_to_move(position_t pos) {
+    return check_position(pos) && blocks_positions.count(pos) == 0;
 }
 
 void Game_engine::start_gameplay() {
@@ -570,7 +569,3 @@ void Game_engine::seed_blocks() {
       
     }
 }
-
-// TODO: zeby nie powtarzalo sie w event
-// player_id Game_engine::get_player_id
-// TODO: !!!!!!!!! chceck position sprawdza tez bloki, wiec w explosins nie chcemy
