@@ -224,9 +224,4 @@ class Game_info {
         }        
 };
 
-
-// added with server implementation
-
-
-
 #endif

@@ -26,14 +26,32 @@ private:
 
     std::map<player_id, player_t> players;
 
+    std::map<player_id, score> scores;
+
+    std::map<player_id, position_t> players_positions;
+
+    std::set<position_t> blocks_positions;
+
     // <position in descriptors arr, player_id>
     std::map<size_t, player_id> player_ids;
 
     player_id next_player_id;
 
+    uint16_t current_turn;
+
+    std::vector<position_t> current_blocks_to_erase;
+
+    std::set<player_id> current_players_to_destroy;
+
     std::vector<Turn_info> turns;
 
+    std::map<bomb_id, bomb_t> bombs;
+
+    bomb_id next_bomb_id;
+
     Random random;
+
+
 
     void manage_connections();
 
@@ -59,12 +77,22 @@ private:
 
     std::vector<std::byte> game_started_msg();
 
+    void seed_player(player_id id);
+
     void seed_players();
 
     void seed_blocks();
 
+    // returns if player can walk into this position
+    bool check_position(position_t position);
 
+    void summarise_turn();
 
+    void end_gameplay();
+
+    void begin_turn();
+
+    void handle_explosion(bomb_id id, bomb_t bomb);
 
 
 
@@ -135,6 +163,8 @@ public:
             finish_server = false;
             gameplay_started = false;
             next_player_id = 0;
+            next_bomb_id = 0;
+            current_turn = 0;
         }
 
     void start_game();    

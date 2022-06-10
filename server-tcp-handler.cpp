@@ -74,8 +74,8 @@ void Server_tcp_handler::reset_revents() {
     }
 }
 
-int Server_tcp_handler::poll_exec() {
-    return poll(poll_descriptors, conn_max, 0);
+int Server_tcp_handler::poll_exec(int timeout) {
+    return poll(poll_descriptors, conn_max, timeout);
 }
 
 bool Server_tcp_handler::is_new_connection() {

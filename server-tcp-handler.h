@@ -73,7 +73,7 @@ public:
     void reset_revents();
 
     // returns poll status
-    int poll_exec();
+    int poll_exec(int timeout);
 
     bool is_new_connection();
 
