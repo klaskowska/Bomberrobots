@@ -57,7 +57,7 @@ void Server_tcp_handler::start_listening() {
     CHECK_ERRNO_EXIT(listen(poll_descriptors[0].fd, 3));
 }
 
-int Server_tcp_handler::accept_connection(int socket_fd, struct sockaddr_in *client_address) {
+int Server_tcp_handler::accept_connection(int socket_fd, struct sockaddr_in6 *client_address) {
     socklen_t client_address_length = (socklen_t) sizeof(*client_address);
 
     int client_fd = accept(socket_fd, (struct sockaddr *) client_address, &client_address_length);
@@ -83,7 +83,9 @@ bool Server_tcp_handler::is_new_connection() {
 }
 
 ssize_t Server_tcp_handler::accept_client() {
-    int client_fd = accept_connection(poll_descriptors[0].fd, NULL);
+    struct sockaddr_in6 client_address;
+
+    int client_fd = accept_connection(poll_descriptors[0].fd, &client_address);
 
     ssize_t accepted_pos = -1;
     for (ssize_t i = 1; i < conn_max; ++i) {
@@ -101,6 +103,21 @@ ssize_t Server_tcp_handler::accept_client() {
         CHECK_ERRNO(close(client_fd));
         fprintf(stderr, "Zbyt dużo klientów.\n");
     }
+
+    // char *client_ip = client_address.sin6_addr;
+    char client_ip[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &client_address.sin6_addr, client_ip, INET6_ADDRSTRLEN);
+    uint16_t client_port = ntohs(client_address.sin6_port);
+
+    std::string address("[");
+    address.append(client_ip);
+    address.append("]:");
+    address.append(std::to_string(client_port));
+
+    addresses.insert_or_assign(accepted_pos, address.data());
+
+    std::cout << "Adres klienta: " << address << "\n";
+
     return accepted_pos;
 }
 
@@ -182,10 +199,20 @@ void Server_tcp_handler::send_message(size_t i, std::vector<std::byte> msg) {
 
     ssize_t sent_length = send(poll_descriptors[i].fd, (std::byte*)&msg[0], msg.size(), NO_FLAGS);
     if (sent_length < 0) {
-        printf("Nie udało się wysłać wiadomości do klienta %ld.\n", i);
+        std::cout << "Nie udało się wysłać wiadomości do klienta" << i << "\n";
         PRINT_ERRNO();
     }
     ENSURE(sent_length == (ssize_t) msg.size());
+}
 
-    printf("Wysłano wiadomość do klienta %ld.\n", i);
+void Server_tcp_handler::send_message_to_all(std::vector<std::byte> msg) {
+    for (ssize_t i = 1; i < conn_max; ++i) {
+        if (poll_descriptors[i].fd != -1) {
+            send_message(i, msg);
+        }
+    }    
+}
+
+std::string Server_tcp_handler::get_address(size_t i) {
+    return addresses.at(i);
 }

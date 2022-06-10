@@ -25,6 +25,11 @@ private:
 
     std::map<player_id, player_t> players;
 
+    // <position in descriptors arr, player_id>
+    std::map<size_t, player_id> player_ids;
+
+    player_id next_player_id;
+
     std::vector<Turn_info> turns;
 
     void manage_connections();
@@ -41,9 +46,13 @@ private:
 
     void send_all_turns(size_t i);
 
+    std::shared_ptr<std::vector<std::byte>> accepted_player_msg(player_id id, player_t player);
+
     void send_accepted_player(size_t i, player_id id, player_t player);
 
     void send_all_accepted_player(size_t i);
+
+    void start_gameplay();
 
 
 
@@ -53,6 +62,7 @@ private:
     class Client_message {
     protected:
         Client_message_code code;
+        
     public:
         Client_message_code get_code() {return code;}
 
@@ -61,47 +71,53 @@ private:
 
     class Join_msg : public Client_message {
     private:
+        Game_engine& engine;
         std::string name;
     public:
-        Join_msg(std::string name) :  name(name) {
+        Join_msg(Game_engine& engine, std::string name) : engine(engine), name(name) {
             code = Client_message_code::Join;
         }
 
         std::string get_name() {return name;}
 
-        void handle_msg(size_t i) {std::cout << i;}
+        void handle_msg(size_t i);
     };
 
 
     class Place_bomb_msg : public Client_message {
+    private:
+        Game_engine& engine;
     public:
-        Place_bomb_msg() {
+        Place_bomb_msg(Game_engine& engine) : engine(engine) {
             code = Client_message_code::Place_bomb_client;
         }
 
-        void handle_msg(size_t i) {std::cout << i;}
+        void handle_msg(size_t i);
     };
 
     class Place_block_msg : public Client_message {
+    private:
+        Game_engine& engine;
     public:
-        Place_block_msg() {
+        Place_block_msg(Game_engine& engine) : engine(engine) {
             code = Client_message_code::Place_block_client;
         }
 
-        void handle_msg(size_t i) {std::cout << i;}
+        void handle_msg(size_t i);
     };
 
     class Move_msg : public Client_message {
     private:
+        Game_engine& engine;
         Direction direction;
     public:
-        Move_msg(Direction direction) : direction(direction) {
+        Move_msg(Game_engine& engine, Direction direction) : engine(engine), direction(direction) {
             code = Client_message_code::Move_client;
         }
 
         Direction get_direction() {return direction;}
 
-        void handle_msg(size_t i) {std::cout << i;}
+        void handle_msg(size_t i);
     };
 
 public:
@@ -109,6 +125,7 @@ public:
         : game_params(game_params), tcp_handler(tcp_handler) {
             finish_server = false;
             gameplay_started = false;
+            next_player_id = 0;
         }
 
     void start_game();    

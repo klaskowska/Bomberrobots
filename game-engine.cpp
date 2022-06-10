@@ -79,16 +79,16 @@ Message_recv_status Game_engine::handle_msg(size_t i) {
             switch (code)
             {
             case Client_message_code::Join:
-                msg.reset(new Join_msg(tcp_handler.read_string()));
+                msg.reset(new Join_msg(*this, tcp_handler.read_string()));
                 break;
             case Client_message_code::Place_bomb_client:
-                msg.reset(new Place_bomb_msg());
+                msg.reset(new Place_bomb_msg(*this));
                 break;
             case Client_message_code::Place_block_client:
-                msg.reset(new Place_block_msg());
+                msg.reset(new Place_block_msg(*this));
                 break;
             case Client_message_code::Move_client:
-                msg.reset(new Move_msg((Direction)tcp_handler.read_uint8()));
+                msg.reset(new Move_msg(*this, (Direction)tcp_handler.read_uint8()));
                 break;
             default:
                 throw MsgException();
@@ -120,6 +120,8 @@ void Game_engine::send_hello(size_t i) {
 
     // send message
     tcp_handler.send_message(i, *msg);
+
+    std::cout << "Wysłano Hello do klienta " << i << "\n";  
 
 }
 
@@ -159,7 +161,7 @@ void Game_engine::send_all_turns(size_t i) {
     }
 }
 
-void Game_engine::send_accepted_player(size_t i, player_id id, player_t player) {
+std::shared_ptr<std::vector<std::byte>> Game_engine::accepted_player_msg(player_id id, player_t player) {
     std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
 
     // prepare message
@@ -167,8 +169,12 @@ void Game_engine::send_accepted_player(size_t i, player_id id, player_t player) 
     msg->push_back(uint8_to_byte(id));
     insert_vector(msg, player_to_bytes(player));
 
-    // send message
-    tcp_handler.send_message(i, *msg);
+    return msg;
+}
+
+void Game_engine::send_accepted_player(size_t i, player_id id, player_t player) {
+    
+    tcp_handler.send_message(i, *accepted_player_msg(id, player));
 
     std::cout << "Wysłano AcceptedPlayer do klienta " << i << "\n"; 
 
@@ -178,4 +184,44 @@ void Game_engine::send_all_accepted_player(size_t i) {
     for (auto &player : players) {
         send_accepted_player(i, player.first, player.second);
     }
+}
+
+void Game_engine::Join_msg::handle_msg(size_t i) {
+    std::cout << "Odebrano Join od klienta " << i << "\n";
+
+    if (engine.gameplay_started) {
+        std::cout << "Gra już się zaczęła\n";
+        return;
+    }
+
+    // add as a player
+    player_id id = engine.next_player_id;
+    engine.next_player_id++;
+    player_t player (name, engine.tcp_handler.get_address(i));
+
+    engine.player_ids.insert_or_assign(i, id);
+    engine.players.insert(std::pair(id, player));
+
+
+    engine.tcp_handler.send_message_to_all(*(engine.accepted_player_msg(id, player)));
+    std::cout << "Wysłano do wszystkich klientów Accepted_client\n";
+
+    if (engine.players.size() == engine.game_params.players_count)
+        engine.start_gameplay();
+}
+
+void Game_engine::Place_bomb_msg::handle_msg(size_t i) {
+    std::cout << "Odebrano Place_bomb od klienta " << i << "\n";
+}
+
+void Game_engine::Place_block_msg::handle_msg(size_t i) {
+    std::cout << "Odebrano Place_block od klienta " << i << "\n";
+}
+
+void Game_engine::Move_msg::handle_msg(size_t i) {
+    std::cout << "Odebrano Move_msg od klienta " << i << "\n";
+}
+
+void Game_engine::start_gameplay() {
+    std::cout << "Rozpoczęto rozgrywkę\n";
 }

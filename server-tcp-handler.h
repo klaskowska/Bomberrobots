@@ -30,6 +30,7 @@ typedef struct current_buf {
     ssize_t buf_length;
 } current_buf_t;
 
+
 struct MsgException : public std::exception
 {
 	const char * what () const throw ()
@@ -40,7 +41,7 @@ struct MsgException : public std::exception
 
 class Server_tcp_handler {
 private:
-    static const ssize_t conn_max = 25;
+    static const ssize_t conn_max = 26;
     static const size_t queue_length = 27;
     static const size_t buf_size = 256;
     std::byte buf[buf_size];
@@ -52,11 +53,13 @@ private:
 
     struct pollfd poll_descriptors[conn_max];
 
+    std::map<size_t, std::string> addresses;
+
     static int open_socket();
 
     void bind_socket(int socket_fd);
 
-    int accept_connection(int socket_fd, struct sockaddr_in *client_address);
+    int accept_connection(int socket_fd, struct sockaddr_in6 *client_address);
 
     void current_buf_update(size_t bytes_count);
 
@@ -87,6 +90,8 @@ public:
 
     void send_message(size_t i, std::vector<std::byte> msg);
 
+    void send_message_to_all(std::vector<std::byte> msg);
+
     void close_conn();
 
     uint8_t read_uint8();
@@ -94,6 +99,8 @@ public:
     std::string read_string();
 
     bool is_buf_empty() {return current_buf.buf_length == 0;}
+
+    std::string get_address(size_t i);
 
 };
 
