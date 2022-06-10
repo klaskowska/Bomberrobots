@@ -224,4 +224,49 @@ void Game_engine::Move_msg::handle_msg(size_t i) {
 
 void Game_engine::start_gameplay() {
     std::cout << "Rozpoczęto rozgrywkę\n";
+
+    turns.push_back(Turn_info(0));
+
+    tcp_handler.send_message_to_all(game_started_msg());
+
+    seed_players();
+
+    seed_blocks();
+
+    tcp_handler.send_message_to_all(turns.at(0).to_bytes());
+
+    std::cout << "Wysłano do wszytskich Turn\n";
+}
+
+std::vector<std::byte> Game_engine::game_started_msg() {
+    std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
+
+    msg->push_back(uint8_to_byte(Server_message_code::GameStarted));
+
+    insert_vector(msg, player_map_to_bytes(players));
+
+    return *msg;
+}
+
+void Game_engine::seed_players() {
+    for (auto &player : players) {
+        uint16_t x = (uint16_t)(random.next() % (uint32_t) game_params.size_x);
+        uint16_t y = (uint16_t)(random.next() % (uint32_t) game_params.size_y);
+        std::shared_ptr<Event> player_moved_event(new Player_moved_event(player.first, position_t(x,y)));
+        turns.at(0).add_event(player_moved_event);
+
+        std::cout << "Ustawiono robota gracza " << player.second.name << " na pozycji (" << x << ", " << y << ")\n"; 
+    }
+}
+
+void Game_engine::seed_blocks() {
+    for (uint16_t i = 0; i < game_params.initial_blocks; i++) {
+        uint16_t x = (uint16_t)(random.next() % (uint32_t) game_params.size_x);
+        uint16_t y = (uint16_t)(random.next() % (uint32_t) game_params.size_y);
+        std::shared_ptr<Event> block_placed_event(new Block_placed_event(position_t(x,y)));
+        turns.at(0).add_event(block_placed_event);  
+
+        std::cout << "Ustawiono blok na pozycji (" << x << ", " << y << ")\n"; 
+      
+    }
 }

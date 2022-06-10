@@ -14,7 +14,7 @@ public:
     }
 
     uint32_t next() {
-        return (*random)();
+        return (uint32_t)(*random)();
     }
 };
 

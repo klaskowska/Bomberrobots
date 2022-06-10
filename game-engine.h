@@ -7,6 +7,7 @@
 #include "server-tcp-handler.h"
 #include "event.h"
 #include "server-parser.h"
+#include "random.h"
 
 
 static bool finish_server;
@@ -32,6 +33,8 @@ private:
 
     std::vector<Turn_info> turns;
 
+    Random random;
+
     void manage_connections();
 
     Message_recv_status handle_msg(size_t i);
@@ -53,6 +56,12 @@ private:
     void send_all_accepted_player(size_t i);
 
     void start_gameplay();
+
+    std::vector<std::byte> game_started_msg();
+
+    void seed_players();
+
+    void seed_blocks();
 
 
 
@@ -122,7 +131,7 @@ private:
 
 public:
     Game_engine(server_parameters_t game_params, Server_tcp_handler &tcp_handler) 
-        : game_params(game_params), tcp_handler(tcp_handler) {
+        : game_params(game_params), tcp_handler(tcp_handler), random(Random(game_params.seed)) {
             finish_server = false;
             gameplay_started = false;
             next_player_id = 0;
