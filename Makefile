@@ -1,14 +1,19 @@
 CC = g++
 CFLAGS = -std=gnu++20 -Wall -Wextra -Wconversion -Werror -O2 -pthread
  
-
+all: robots-server robots-client
  
 robots-server: robots-server.o game-engine.o byte-parser.o event.o server-parser.o server-tcp-handler.o game-messages.o error-handler.o random.h
 	$(CC) $(CFLAGS) -o robots-server robots-server.o game-engine.o server-tcp-handler.o byte-parser.o event.o server-parser.o game-messages.o error-handler.o random.h -lboost_program_options
 
- 
+robots-client: robots-client.o byte-parser.o game-messages.o client-parser.o error-handler.o
+	$(CC) $(CFLAGS) -o robots-client robots-client.o byte-parser.o game-messages.o client-parser.o error-handler.o -lboost_program_options
+
 robots-server.o: robots-server.cpp game-engine.h
 	$(CC) $(CFLAGS) -c robots-server.cpp -lboost_program_options
+
+robots-client.o: robots-client.cpp byte-parser.h game-messages.h client-parser.h error-handler.h
+	$(CC) $(CFLAGS) -c robots-client.cpp -lboost_program_options
 
 game-engine.o: game-engine.cpp game-engine.h server-parser.h event.h byte-parser.h server-tcp-handler.h game-messages.h error-handler.h random.h
 	$(CC) $(CFLAGS) -c game-engine.cpp -lboost_program_options
@@ -25,9 +30,12 @@ event.o: event.cpp event.h byte-parser.h game-messages.h
 byte-parser.o: byte-parser.cpp byte-parser.h game-messages.h
 	$(CC) $(CFLAGS) -c byte-parser.cpp
 
+client-parser.o: client-parser.cpp client-parser.h error-handler.h
+	$(CC) $(CFLAGS) -c client-parser.cpp -lboost_program_options
+
 game-messages.o: game-messages.h game-messages.cpp
 
 error-handler.o: error-handler.h error-handler.cpp
 
 clean: 
-	rm *.o robots-server
+	rm *.o robots-server robots-client
