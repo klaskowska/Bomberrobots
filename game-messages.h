@@ -86,7 +86,7 @@ class Lobby_info {
             game_length{game_length}, explosion_radius{explosion_radius}, bomb_timer{bomb_timer} {}
         
         void add_player(player_id id, player_t player) {
-            players.insert(std::pair(id, player));
+            players.insert(std::pair<player_id, player_t>(id, player));
         }
 
         void clear_players() {
@@ -160,7 +160,7 @@ class Game_info {
 
         void add_bomb(bomb_id id, position_t position) {
             bomb_t bomb{position, bomb_timer};
-            bombs.insert(std::pair(id, bomb));
+            bombs.insert(std::pair<bomb_id, bomb_t>(id, bomb));
         }
 
         void add_block(position_t position) {
@@ -182,7 +182,7 @@ class Game_info {
 
         void change_player_position(player_id id, position_t position) {
             std::cout << "position\n";
-            player_positions.insert_or_assign(id, position);
+            player_positions.insert(std::pair<player_id, position_t>(id, position));
         }
 
         // gettery
