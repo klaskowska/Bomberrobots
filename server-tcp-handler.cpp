@@ -133,60 +133,20 @@ void Server_tcp_handler::report_msg_status(Message_recv_status status, size_t i)
     }
 }
 
-void Server_tcp_handler::read_from(size_t i) {
+Message_recv_status Server_tcp_handler::read_from(size_t i) {
     current_buf.buf_length = read(poll_descriptors[i].fd, buf, buf_size);
     current_buf.buf = buf;
-}
-
-Message_recv Server_tcp_handler::read_msg_from(size_t i) {
-    
-    Message_recv message;
-
-    read_from(i);
 
     if (current_buf.buf_length < 0) {
-        message.status = Message_recv_status::ERROR_CONN;
-        return message;
+        return Message_recv_status::ERROR_CONN;
     }
     if (current_buf.buf_length == 0) {
-        message.status = Message_recv_status::END_CONN;
-        return message;        
+        return Message_recv_status::END_CONN;      
     }
 
-    try {
-        message.client_message = read_client_msg(i);
-        message.status = Message_recv_status::SUCCESS;
-    } catch (MsgException &e) {
-        message.status = Message_recv_status::ERROR_MSG;
-    }
-
-    return message;
+    return Message_recv_status::POTENTIALLY_SUCCESS;
 }
 
-Client_message Server_tcp_handler::read_client_msg(size_t i) {
-    Client_message_code code = (Client_message_code)read_uint8();
-
-    Client_message msg;
-
-    switch (code)
-    {
-    case Client_message_code::Join:
-        msg = Join_msg(read_string());
-        break;
-    case Client_message_code::Place_bomb_client:
-        msg = Place_bomb_msg();
-        break;
-    case Client_message_code::Place_block_client:
-        msg = Place_block_msg();
-        break;
-    case Client_message_code::Move_client:
-        msg = Move_msg((Direction)read_uint8());
-        break;
-    default:
-        throw MsgException();
-    }
-    return current_buf.buf_length == 0 ? msg : read_client_msg(i);
-}
 
 void Server_tcp_handler::current_buf_update(size_t bytes_count) {
     current_buf.buf += bytes_count;
@@ -194,6 +154,10 @@ void Server_tcp_handler::current_buf_update(size_t bytes_count) {
 }
 
 uint8_t Server_tcp_handler::read_uint8() {
+    if (current_buf.buf_length < 1) {
+        throw MsgException();
+    }
+
     uint8_t result = (uint8_t)current_buf.buf[0];
     current_buf_update(1);
     return result;

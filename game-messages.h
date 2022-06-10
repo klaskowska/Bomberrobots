@@ -227,46 +227,6 @@ class Game_info {
 
 // added with server implementation
 
-class Client_message {
-protected:
-    Client_message_code code;
-public:
-    Client_message_code get_code() {return code;}
-};
 
-class Join_msg : public Client_message {
-private:
-    std::string name;
-public:
-    Join_msg(std::string name) :  name(name) {
-        code = Client_message_code::Join;
-    }
-
-    std::string get_name() {return name;}
-};
-
-
-class Place_bomb_msg : public Client_message {
-public:
-    Place_bomb_msg() {
-        code = Client_message_code::Place_bomb_client;
-    }
-};
-
-class Place_block_msg : public Client_message {
-public:
-    Place_block_msg() {
-        code = Client_message_code::Place_block_client;
-    }
-};
-
-class Move_msg : public Client_message {
-private:
-    Direction direction;
-public:
-    Move_msg(Direction direction) : direction(direction) {
-        code = Client_message_code::Move_client;
-    }
-};
 
 #endif

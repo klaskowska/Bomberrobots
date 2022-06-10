@@ -14,19 +14,16 @@
 #include <vector>
 #include <exception>
 #include <unistd.h>
+#include <memory>
 #include "game-messages.h"
 
 enum class Message_recv_status {
     ERROR_CONN,
     ERROR_MSG,
     END_CONN,
+    POTENTIALLY_SUCCESS,
     SUCCESS,
 };
-
-typedef struct Message_recv {
-    Message_recv_status status;
-    Client_message client_message;
-} Message_recv;
 
 typedef struct current_buf {
     std::byte *buf;
@@ -61,13 +58,7 @@ private:
 
     int accept_connection(int socket_fd, struct sockaddr_in *client_address);
 
-    uint8_t read_uint8();
-
-    std::string read_string();
-
     void current_buf_update(size_t bytes_count);
-
-    Client_message read_client_msg(size_t i);
 
 public:
     Server_tcp_handler(uint16_t port);
@@ -92,15 +83,17 @@ public:
 
     void report_msg_status(Message_recv_status status, size_t i);
 
-    void read_from(size_t i);
-
-    Message_recv read_msg_from(size_t i);
+    Message_recv_status read_from(size_t i);
 
     void send_message(size_t i, std::vector<std::byte> msg);
 
     void close_conn();
 
+    uint8_t read_uint8();
 
+    std::string read_string();
+
+    bool is_buf_empty() {return current_buf.buf_length == 0;}
 
 };
 

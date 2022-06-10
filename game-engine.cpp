@@ -62,38 +62,47 @@ void Game_engine::manage_connections() {
 
 //TODO
 Message_recv_status Game_engine::handle_msg(size_t i) {
+    Message_recv_status status = tcp_handler.read_from(i);
+    std::shared_ptr<Client_message> msg;
+    
+    do {
+        if (status != Message_recv_status::POTENTIALLY_SUCCESS) {
 
-    Message_recv message_recv = tcp_handler.read_msg_from(i);
+            // TODO: erase client from clients/players
 
-    if (message_recv.status != Message_recv_status::SUCCESS) {
+            return status;
+        }
+        try {
 
-        // TODO: erase client from clients/players
+            Client_message_code code = (Client_message_code)tcp_handler.read_uint8();
 
-        return message_recv.status;
-    }
+            switch (code)
+            {
+            case Client_message_code::Join:
+                msg.reset(new Join_msg(tcp_handler.read_string()));
+                break;
+            case Client_message_code::Place_bomb_client:
+                msg.reset(new Place_bomb_msg());
+                break;
+            case Client_message_code::Place_block_client:
+                msg.reset(new Place_block_msg());
+                break;
+            case Client_message_code::Move_client:
+                msg.reset(new Move_msg((Direction)tcp_handler.read_uint8()));
+                break;
+            default:
+                throw MsgException();
+            }
+        } catch (MsgException &e) {
+            return Message_recv_status::ERROR_MSG;
+        }
 
-    switch (message_recv.client_message.get_code()) {
-        // TODO
-        case Client_message_code::Join:
-            handle_join();
-            break;
-        case Client_message_code::Place_bomb_client:
-            break;
-        case Client_message_code::Place_block_client:
-            break;
-        case Client_message_code::Move_client:
-            break;
-    }
 
-    // TODO: handle specific message
+    } while (!tcp_handler.is_buf_empty());
 
+    msg->handle_msg(i);
 
-    return message_recv.status;
-}
-
-// TODO
-void Game_engine::handle_join() {
-
+    return Message_recv_status::SUCCESS;
 }
 
 void Game_engine::send_hello(size_t i) {
