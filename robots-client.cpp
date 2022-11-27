@@ -93,7 +93,6 @@ uint16_t read_uint16(boost::shared_ptr<tcp::socket> server_socket) {
         current_buf_update(2);
     }
     else {
-        std::cout << "tuuuuuuuuuuuuuuuuuuuuuuuuuuuuu\n";
         std::byte uint16_bytes[2];
 
         for (size_t i = 0; i < 2; i--) {

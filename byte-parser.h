@@ -34,8 +34,6 @@ std::vector<std::byte> player_position_map_to_bytes(std::map<player_id, position
 
 std::vector<std::byte> score_map_to_bytes(std::map<player_id, score> scores);
 
-// added with server implementation
-
 std::vector<std::byte> uint8_list_to_bytes(std::vector<uint8_t> elements);
 
 std::vector<std::byte> position_list_to_bytes(std::vector<position_t> positions);

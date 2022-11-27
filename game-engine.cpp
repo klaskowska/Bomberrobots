@@ -1,7 +1,5 @@
 #include "game-engine.h"
 
-
-
 void catch_int(int sig) {
     finish_server = true;
     fprintf(stderr,

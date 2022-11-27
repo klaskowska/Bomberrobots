@@ -148,8 +148,6 @@ std::vector<std::byte> score_map_to_bytes(std::map<player_id, score> scores) {
     return message;
 }
 
-// added with server implementation
-
 std::vector<std::byte> uint8_list_to_bytes(std::vector<uint8_t> elements) {
     std::shared_ptr<std::vector<std::byte>> msg(new std::vector<std::byte>);
 

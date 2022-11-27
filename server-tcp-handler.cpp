@@ -104,7 +104,6 @@ ssize_t Server_tcp_handler::accept_client() {
         fprintf(stderr, "Zbyt dużo klientów.\n");
     }
 
-    // char *client_ip = client_address.sin6_addr;
     char client_ip[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &client_address.sin6_addr, client_ip, INET6_ADDRSTRLEN);
     uint16_t client_port = ntohs(client_address.sin6_port);
